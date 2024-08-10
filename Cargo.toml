@@ -1,0 +1,17 @@
+[package]
+name = "dbrunner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pg_query = "5.1.0"
+prost = "0.13.1"
+sql-insight = "0.2.0"
+thiserror = "1.0.63"
+tonic = "0.12.1"
+
+[dev-dependencies]
+rstest = "0.22.0"
+
+[build-dependencies]
+tonic-build = "0.12.1"
