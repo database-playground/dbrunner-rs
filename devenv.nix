@@ -10,6 +10,7 @@
     pkgs.cargo-edit
     pkgs.protolint
     pkgs.protobuf
+    pkgs.sqlite
   ];
 
   # https://devenv.sh/languages/
