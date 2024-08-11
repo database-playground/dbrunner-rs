@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+blake3 = "1.5.3"
 pg_query = "5.1.0"
 prost = "0.13.1"
 rusqlite = "0.32.1"
