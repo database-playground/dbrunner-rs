@@ -1,6 +1,6 @@
 use std::{pin::Pin, result::Result};
 
-pub use dbrunner::db_runner_service_server::DbRunnerService;
+pub use dbrunner::db_runner_service_server::{DbRunnerService, DbRunnerServiceServer};
 use dbrunner::{
     retrieve_query_response::Kind, run_query_response::ResponseType, AreQueriesOutputSameRequest,
     AreQueriesOutputSameResponse, Cell, DataRow, HeaderRow, RetrieveQueryRequest,

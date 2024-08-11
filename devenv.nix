@@ -3,6 +3,7 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
+  env.REDIS_ADDR = "redis://localhost:6379";
   env.REDIS_INTEGRATION_URI = "redis://localhost:6379";
 
   # https://devenv.sh/packages/
