@@ -8,8 +8,9 @@ pub async fn execute_query(query: Query) -> Result<QueryResponse, Error> {
     let formatted_query = query.format()?;
 
     let handle = tokio::task::spawn_blocking(move || {
-        let conn = rusqlite::Connection::open_in_memory()?;
-        conn.busy_timeout(Duration::from_secs(3))?;
+        let conn = rusqlite::Connection::open_in_memory().map_err(Error::ConstructConnection)?;
+        conn.busy_timeout(Duration::from_secs(3))
+            .map_err(Error::ConstructConnection)?;
 
         // run the initial SQL
         conn.execute_batch(&formatted_query.initial_sql)
@@ -36,7 +37,8 @@ pub async fn execute_query(query: Query) -> Result<QueryResponse, Error> {
                     }
                 }
                 Ok(row_data)
-            })?
+            })
+            .map_err(Error::ExecuteQuery)?
             .collect::<Result<Vec<Vec<Option<String>>>, rusqlite::Error>>()
             .or_else(|e| match e {
                 rusqlite::Error::SqliteFailure(_, Some(error_message))
@@ -212,6 +214,26 @@ mod tests {
         let response = execute_query(query).await;
 
         assert_matches!(response, Err(Error::ExecuteQuery(_)));
+    }
+
+    #[tokio::test]
+    async fn test_with_malformed_query_2() {
+        let query = Query {
+            initial_sql: r#"
+                CREATE TABLE test (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT
+                );
+
+                INSERT INTO test (name) VALUES ('Alice');
+                INSERT INTO test (name) VALUES ('Bob');
+            "#
+            .to_string(),
+            query: "SELECT * FROM test WHERE id = @1;".to_string(),
+        };
+        let response = execute_query(query).await;
+
+        assert_matches!(response, Err(Error::Format(_)));
     }
 
     #[tokio::test]
