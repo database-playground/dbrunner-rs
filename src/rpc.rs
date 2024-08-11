@@ -1,5 +1,3 @@
-use dbrunner::db_runner_service_server::DbRunnerService;
-
 pub mod dbrunner {
     tonic::include_proto!("dbrunner.v1");
 }

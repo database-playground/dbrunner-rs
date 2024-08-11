@@ -1,15 +1,13 @@
 pub mod error;
 pub mod fmt;
 
-use std::{
-    sync::{Arc, Condvar, Mutex},
-    time::{self, Duration},
-};
+use std::time::Duration;
 
 pub use error::Error;
 use rusqlite::types::Value;
 
 /// A SQL query.
+#[derive(Debug)]
 pub struct Query {
     /// The initial SQL (migration).
     pub initial_sql: String,
@@ -30,65 +28,80 @@ impl Query {
 }
 
 /// A standard SQL query response.
+#[derive(Debug)]
 pub struct QueryResponse {
     pub header: Vec<String>,
     pub rows: Vec<Vec<Option<String>>>,
 }
 
-pub fn execute_query(query: Query) -> Result<QueryResponse, Error> {
+pub async fn execute_query(query: Query) -> Result<QueryResponse, Error> {
     let formatted_query = query.format()?;
-    let conn = rusqlite::Connection::open_in_memory()?;
-    conn.busy_timeout(time::Duration::from_secs(3))?;
 
-    // run the initial SQL
-    conn.execute_batch(&formatted_query.initial_sql)?;
+    let handle = tokio::task::spawn_blocking(move || {
+        let conn = rusqlite::Connection::open_in_memory()?;
+        conn.busy_timeout(Duration::from_secs(3))?;
 
-    // run the query
-    let mut stmt = conn.prepare(&formatted_query.query)?;
-    let column_count = stmt.column_count();
-    let rows = stmt
-        .query_map((), |row| {
-            let mut row_data = Vec::with_capacity(column_count);
-            for i in 0..column_count {
-                let cell = row.get::<_, Value>(i)?;
-                match cell {
-                    Value::Null => row_data.push(None),
-                    Value::Integer(i) => row_data.push(Some(i.to_string())),
-                    Value::Real(f) => row_data.push(Some(f.to_string())),
-                    Value::Text(s) => row_data.push(Some(s)),
-                    Value::Blob(b) => row_data.push(Some(String::from_utf8_lossy(&b).to_string())),
+        // run the initial SQL
+        conn.execute_batch(&formatted_query.initial_sql)
+            .map_err(Error::ExecuteInitialSql)?;
+
+        // run the query
+        let mut stmt = conn
+            .prepare(&formatted_query.query)
+            .map_err(Error::ExecuteQuery)?;
+        let column_count = stmt.column_count();
+        let rows = stmt
+            .query_map((), |row| {
+                let mut row_data = Vec::with_capacity(column_count);
+                for i in 0..column_count {
+                    let cell = row.get::<_, Value>(i)?;
+                    match cell {
+                        Value::Null => row_data.push(None),
+                        Value::Integer(i) => row_data.push(Some(i.to_string())),
+                        Value::Real(f) => row_data.push(Some(f.to_string())),
+                        Value::Text(s) => row_data.push(Some(s)),
+                        Value::Blob(b) => {
+                            row_data.push(Some(String::from_utf8_lossy(&b).to_string()))
+                        }
+                    }
                 }
-            }
-            Ok(row_data)
-        })?
-        .collect::<Result<Vec<Vec<Option<String>>>, rusqlite::Error>>()
-        .or_else(|e| match e {
-            rusqlite::Error::SqliteFailure(_, Some(error_message))
-                if error_message == "not an error" =>
-            {
-                Ok(Vec::new())
-            }
-            _ => Err(Error::TransformQueryResult(e)),
-        })?;
-    let headers = stmt
-        .column_names()
-        .into_iter()
-        .map(String::from)
-        .collect::<Vec<String>>();
+                Ok(row_data)
+            })?
+            .collect::<Result<Vec<Vec<Option<String>>>, rusqlite::Error>>()
+            .or_else(|e| match e {
+                rusqlite::Error::SqliteFailure(_, Some(error_message))
+                    if error_message == "not an error" =>
+                {
+                    Ok(Vec::new())
+                }
+                _ => Err(Error::TransformQueryResult(e)),
+            })?;
+        let header = stmt
+            .column_names()
+            .into_iter()
+            .map(String::from)
+            .collect::<Vec<String>>();
 
-    // Execute the query and return the response.
-    Ok(QueryResponse {
-        header: headers,
-        rows,
-    })
+        Ok::<_, Error>(QueryResponse { header, rows })
+    });
+    let timeout_result = tokio::time::timeout(Duration::from_secs(5), handle).await;
+
+    match timeout_result {
+        Err(e) => Err(Error::QueryTimedOut(e)),
+        Ok(Err(e)) => Err(Error::RetrieveResult(e)),
+        Ok(Ok(Err(e))) => Err(e),
+        Ok(Ok(Ok(response))) => Ok(response),
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::assert_matches::assert_matches;
+
     use super::*;
 
-    #[test]
-    fn test_with_valid_query() {
+    #[tokio::test]
+    async fn test_with_valid_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -102,7 +115,7 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM test;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(response.header, vec!["id", "name"]);
         assert_eq!(
             response.rows,
@@ -113,8 +126,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_with_no_query() {
+    #[tokio::test]
+    async fn test_with_no_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -128,13 +141,13 @@ mod tests {
             .to_string(),
             query: "".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(response.header.len(), 0, "header should be empty");
         assert_eq!(response.rows.len(), 0, "rows should be empty");
     }
 
-    #[test]
-    fn test_with_update_query() {
+    #[tokio::test]
+    async fn test_with_update_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -148,13 +161,13 @@ mod tests {
             .to_string(),
             query: "UPDATE test SET name = 'Charlie' WHERE id = 1;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(response.header.len(), 0, "header should be empty");
         assert_eq!(response.rows.len(), 0, "rows should be empty");
     }
 
-    #[test]
-    fn test_with_update_returning_query() {
+    #[tokio::test]
+    async fn test_with_update_returning_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -168,7 +181,7 @@ mod tests {
             .to_string(),
             query: "UPDATE test SET name = 'Charlie' WHERE id = 1 RETURNING *;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(response.header, vec!["id", "name"]);
         assert_eq!(
             response.rows,
@@ -199,18 +212,20 @@ mod tests {
             "#
             .to_string(),
         };
-        let response = execute_query(query);
-        let error = response.err().unwrap();
 
-        assert_eq!(
-            error.to_string(),
-            "Query is too complex".to_string(),
-            "error should be 'Query is too complex'"
-        );
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("runtime build");
+        let response = rt.block_on(execute_query(query));
+
+        assert_matches!(response, Err(Error::QueryTimedOut(_)));
+        // kill runtime
+        rt.shutdown_background();
     }
 
-    #[test]
-    fn test_with_malformed_query() {
+    #[tokio::test]
+    async fn test_with_malformed_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -224,12 +239,13 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM unknown_table;".to_string(),
         };
-        let response = execute_query(query);
-        assert!(response.is_err());
+        let response = execute_query(query).await;
+
+        assert_matches!(response, Err(Error::ExecuteQuery(_)));
     }
 
-    #[test]
-    fn test_with_invalid_query() {
+    #[tokio::test]
+    async fn test_with_invalid_query() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -243,12 +259,12 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM test WHERE id = ':D)D)D))D)D)D)D)D;".to_string(),
         };
-        let response = execute_query(query);
-        assert!(response.is_err());
+        let response = execute_query(query).await;
+        assert_matches!(response, Err(Error::Format(_)));
     }
 
-    #[test]
-    fn test_with_invalid_schema() {
+    #[tokio::test]
+    async fn test_with_invalid_schema() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -256,17 +272,17 @@ mod tests {
                     name TEXT
                 );
 
-                INSERT INTO unknown_table (name) VALUES ('Alice');
+                ABCDEFG;
                 "#
             .to_string(),
             query: "SELECT * FROM test;".to_string(),
         };
-        let response = execute_query(query);
-        assert!(response.is_err());
+        let response = execute_query(query).await;
+        assert_matches!(response, Err(Error::ExecuteInitialSql(_)));
     }
 
-    #[test]
-    fn test_with_nil_return() {
+    #[tokio::test]
+    async fn test_with_nil_return() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -279,7 +295,7 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM test;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(
             response.rows,
             vec![vec![Some("1".to_string()), None]],
@@ -287,8 +303,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_with_real_number() {
+    #[tokio::test]
+    async fn test_with_real_number() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -301,7 +317,7 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM test;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(
             response.rows,
             vec![vec![Some("1".to_string()), Some("1.23".to_string())]],
@@ -309,8 +325,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_with_blob() {
+    #[tokio::test]
+    async fn test_with_blob() {
         let query = Query {
             initial_sql: r#"
                 CREATE TABLE test (
@@ -323,7 +339,7 @@ mod tests {
             .to_string(),
             query: "SELECT * FROM test;".to_string(),
         };
-        let response = execute_query(query).unwrap();
+        let response = execute_query(query).await.expect("no error");
         assert_eq!(
             response.rows,
             vec![vec![Some("1".to_string()), Some("hello".to_string())]],

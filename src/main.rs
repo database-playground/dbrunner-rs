@@ -1,3 +1,5 @@
+#![feature(assert_matches)]
+
 pub mod rpc;
 pub mod sql;
 

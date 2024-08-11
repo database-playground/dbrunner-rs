@@ -8,6 +8,7 @@
   packages = [
     pkgs.git
     pkgs.cargo-edit
+    pkgs.cargo-nextest
     pkgs.protolint
     pkgs.protobuf
     pkgs.sqlite
