@@ -21,6 +21,7 @@ async fn main() {
     let redis_client = redis::Client::open(redis_addr).expect("Failed to open Redis client");
 
     let dbrunner_service = rpc::DbRunner::new(redis_client);
+    println!("Server listening on {}", addr);
 
     Server::builder()
         .add_service(rpc::DbRunnerServiceServer::new(dbrunner_service))
