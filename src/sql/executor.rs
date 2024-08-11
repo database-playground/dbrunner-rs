@@ -233,7 +233,7 @@ mod tests {
         };
         let response = execute_query(query).await;
 
-        assert_matches!(response, Err(Error::Format(_)));
+        assert_matches!(response, Err(Error::ExecuteQuery(_)));
     }
 
     #[tokio::test]
