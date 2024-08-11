@@ -305,6 +305,7 @@ dependencies = [
  "sql-insight",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
 ]

@@ -58,7 +58,7 @@ message RetrieveQueryResponse {
 }
 
 message HeaderRow {
-  repeated string headers = 1;
+  repeated string cells = 1;
 }
 
 message DataRow {

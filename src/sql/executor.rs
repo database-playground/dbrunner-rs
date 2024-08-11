@@ -57,7 +57,7 @@ pub async fn execute_query(query: Query) -> Result<QueryResponse, Error> {
     let timeout_result = tokio::time::timeout(Duration::from_secs(5), handle).await;
 
     match timeout_result {
-        Err(e) => Err(Error::QueryTimedOut(e)),
+        Err(_) => Err(Error::QueryTimedOut),
         Ok(Err(e)) => Err(Error::RetrieveResult(e)),
         Ok(Ok(Err(e))) => Err(e),
         Ok(Ok(Ok(response))) => Ok(response),
@@ -189,7 +189,7 @@ mod tests {
             .expect("runtime build");
         let response = rt.block_on(execute_query(query));
 
-        assert_matches!(response, Err(Error::QueryTimedOut(_)));
+        assert_matches!(response, Err(Error::QueryTimedOut));
         // kill runtime
         rt.shutdown_background();
     }

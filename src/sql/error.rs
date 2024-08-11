@@ -14,14 +14,11 @@ pub enum Error {
     #[error("execute query: {0}")]
     ExecuteQuery(rusqlite::Error),
 
-    #[error("query timed out: {0}")]
-    QueryTimedOut(#[from] tokio::time::error::Elapsed),
+    #[error("query timed out")]
+    QueryTimedOut,
 
     #[error("retrieve result: {0}")]
     RetrieveResult(#[from] JoinError),
-
-    #[error("unable to retrieve query from CPU thread")]
-    RetrieveQueryFromCpuThread,
 
     #[error("transform query result: {0}")]
     TransformQueryResult(rusqlite::Error),
