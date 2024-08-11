@@ -3,6 +3,7 @@
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
+  env.REDIS_INTEGRATION_URI = "redis://localhost:6379";
 
   # https://devenv.sh/packages/
   packages = [
@@ -18,6 +19,7 @@
   languages.rust.enable = true;
   languages.rust.channel = "nightly";
 
+  services.redis.enable = true;
   # https://devenv.sh/processes/
   # processes.cargo-watch.exec = "cargo-watch";
 

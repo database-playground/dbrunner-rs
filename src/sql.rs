@@ -5,10 +5,11 @@ pub mod uid;
 
 pub use error::Error;
 pub use executor::execute_query;
+use serde::{Deserialize, Serialize};
 pub use uid::{Hash as Blake3Hash, UidGetter};
 
 /// A SQL query.
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct Query {
     /// The initial SQL (migration).
     pub initial_sql: String,
@@ -29,7 +30,7 @@ impl Query {
 }
 
 /// A standard SQL query response.
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize, PartialEq, Eq)]
 pub struct QueryResponse {
     pub header: Vec<String>,
     pub rows: Vec<Vec<Option<String>>>,

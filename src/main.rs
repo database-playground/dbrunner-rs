@@ -1,5 +1,6 @@
 #![feature(assert_matches)]
 
+pub mod cache;
 pub mod rpc;
 pub mod sql;
 
