@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 blake3 = "1.5.3"
+itertools = "0.13.0"
 prost = "0.13.1"
 redis = { version = "0.26.1", default-features = false, features = [
     "tokio-comp",

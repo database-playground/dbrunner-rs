@@ -121,22 +121,18 @@ impl DbRunnerService for DbRunner {
 
         // map the response to a RetrieveQueryResponse stream
         let query_responses = Box::pin(stream_iter(
-            [
-                RetrieveQueryResponse {
+            itertools::chain![
+                std::iter::once(RetrieveQueryResponse {
                     kind: Some(Kind::Header(HeaderRow {
                         cells: response.header,
                     })),
-                },
-                RetrieveQueryResponse {
+                }),
+                response.rows.into_iter().map(|row| RetrieveQueryResponse {
                     kind: Some(Kind::Row(DataRow {
-                        cells: response.rows[0]
-                            .iter()
-                            .map(|r| Cell { value: r.clone() })
-                            .collect::<Vec<_>>(),
+                        cells: row.into_iter().map(|r| Cell { value: r }).collect(),
                     })),
-                },
+                })
             ]
-            .into_iter()
             .map(Ok::<_, Status>),
         )) as Self::RetrieveQueryStream;
 
