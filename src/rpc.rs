@@ -88,7 +88,8 @@ impl DbRunnerService for DbRunner {
             Err(e) => match e {
                 sql::Error::ExecuteInitialSql(_)
                 | sql::Error::ExecuteQuery(_)
-                | sql::Error::QueryTimedOut => Ok(Response::new(RunQueryResponse {
+                | sql::Error::QueryTimedOut
+                | sql::Error::TransformQueryResult(_) => Ok(Response::new(RunQueryResponse {
                     response_type: Some(ResponseType::Error(e.to_string())),
                 })),
                 _ => Err(Status::internal(format!("Failed to run query: {e}"))),
