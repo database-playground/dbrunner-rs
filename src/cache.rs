@@ -158,6 +158,7 @@ mod tests {
     use super::RedisCacher;
 
     #[tokio::test]
+    #[ignore = "requires a running Redis server"]
     async fn test_cache() {
         let mut conn = create_connection(0).await;
         let mut cacher = RedisCacher::new(&mut conn);
@@ -188,6 +189,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires a running Redis server"]
     async fn test_cache_not_hit() {
         let mut conn = create_connection(1).await;
         let mut cacher = RedisCacher::new(&mut conn);
@@ -207,6 +209,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires a running Redis server"]
     async fn test_two_uid_same() {
         let mut conn = create_connection(2).await;
         let mut cacher = RedisCacher::new(&mut conn);
@@ -289,10 +292,12 @@ mod tests {
     }
 
     async fn create_connection(test_id: u16) -> redis::aio::MultiplexedConnection {
+        let integration_uri =
+            std::env::var("REDIS_INTEGRATION_URI").expect("REDIS_INTEGRATION_URI is not set");
         let integration_test_db = test_id + 8;
         let redis_url = format!(
             "{uri}/{db}",
-            uri = env!("REDIS_INTEGRATION_URI"),
+            uri = integration_uri,
             db = integration_test_db
         );
 

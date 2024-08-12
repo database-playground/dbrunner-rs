@@ -63,13 +63,11 @@ impl DbRunnerService for DbRunner {
         let query_uid = query.get_uid().to_hex();
 
         // Return the cache if it exists.
-        match cacher.get::<QueryResponse>(query_uid.as_str()).await {
-            Ok(cache::CacheState::Hit(_)) => {
-                return Ok(Response::new(RunQueryResponse {
-                    response_type: Some(ResponseType::Id(query_uid.to_string())),
-                }));
-            }
-            _ => {}
+        if let Ok(cache::CacheState::Hit(_)) = cacher.get::<QueryResponse>(query_uid.as_str()).await
+        {
+            return Ok(Response::new(RunQueryResponse {
+                response_type: Some(ResponseType::Id(query_uid.to_string())),
+            }));
         }
 
         // Run the query.
