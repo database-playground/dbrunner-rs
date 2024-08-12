@@ -14,6 +14,7 @@
     pkgs.protolint
     pkgs.protobuf
     pkgs.sqlite
+    pkgs.grpcui
   ];
 
   # https://devenv.sh/languages/
