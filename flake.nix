@@ -38,7 +38,10 @@
         crate = crane'.buildPackage {
           src = ./.;
           nativeBuildInputs = [ pkgs.protobuf ];
-          propagatedBuildInputs = [ pkgs.sqlite ];
+          buildInputs = [
+            pkgs.sqlite
+            pkgs.libiconv
+          ];
           strictDeps = true;
         };
       in
