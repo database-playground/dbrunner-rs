@@ -2,6 +2,10 @@ cargo-features = ["edition2024"]
 
 [package]
 name = "dbrunner"
+description = "The SQLite-backed arbitrary SQL query executor."
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/database-playground/dbrunner-rs"
 version = "0.1.0"
 edition = "2024"
 publish = false
