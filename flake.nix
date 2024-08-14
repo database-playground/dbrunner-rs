@@ -37,7 +37,18 @@
         );
         crate = crane'.buildPackage {
           src = ./.;
-          nativeBuildInputs = [ pkgs.protobuf ];
+          nativeBuildInputs = [
+            pkgs.protobuf
+
+            # It should not be necessary to add this. However,
+            # the LD_LIBRARY_PATH is not set correctly in the
+            # x86_64-linux system.
+            #
+            # It takes me a rough time to figure out this.
+            # Sadly, I give up and add this to make it just work.
+            # (not the best solution definitely)
+            pkgs.autoPatchelfHook
+          ];
           buildInputs = [
             pkgs.sqlite
             pkgs.libiconv
