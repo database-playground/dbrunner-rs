@@ -4,12 +4,6 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-      };
-    };
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     utils = {
       url = "github:numtide/flake-utils";
@@ -21,7 +15,6 @@
       self,
       nixpkgs,
       utils,
-      crane,
       fenix,
     }:
     utils.lib.eachDefaultSystem (
@@ -29,14 +22,22 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         fenix' = pkgs.callPackage fenix { };
-        crane' = (crane.mkLib pkgs).overrideToolchain (
-          (fenix'.combine [
-            fenix'.latest.cargo
-            fenix'.latest.rustc
-          ])
-        );
-        crate = crane'.buildPackage {
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = fenix'.latest.cargo;
+          rustc = fenix'.latest.rustc;
+        };
+        crate = rustPlatform.buildRustPackage {
+          name = "dbrunner";
           src = ./.;
+
+          cargoLock = {
+            lockFile = ./Cargo.lock;
+            allowBuiltinFetchGit = true;
+          };
+          useNextest = true;
+          # unknown variant `2024`, expected one of `2015`, `2018`, `2021`
+          auditable = false;
+
           nativeBuildInputs = [ pkgs.protobuf ];
           buildInputs = [ pkgs.libiconv ];
           strictDeps = true;
