@@ -53,6 +53,10 @@
             pkgs.sqlite
             pkgs.libiconv
           ];
+          checkInputs = [
+            pkgs.sqlite
+            pkgs.libiconv
+          ];
           strictDeps = true;
         };
       in
