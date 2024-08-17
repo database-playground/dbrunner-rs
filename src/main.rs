@@ -1,10 +1,14 @@
 #![feature(assert_matches)]
 
+use mimalloc_rust::GlobalMiMalloc;
 use tonic::transport::Server;
 
 pub mod cache;
 pub mod rpc;
 pub mod sql;
+
+#[global_allocator]
+static GLOBAL_MIMALLOC: GlobalMiMalloc = GlobalMiMalloc;
 
 #[tokio::main]
 async fn main() {

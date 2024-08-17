@@ -13,6 +13,7 @@ publish = false
 [dependencies]
 blake3 = "1.5.3"
 itertools = "0.13.0"
+mimalloc-rust = "0.2.1"
 prost = "0.13.1"
 redis = { version = "0.26.1", default-features = false, features = [
     "tokio-comp",
@@ -35,3 +36,6 @@ rstest = { version = "0.22.0", default-features = false }
 
 [build-dependencies]
 tonic-build = "0.12.1"
+
+[profile.release]
+lto = "thin"
