@@ -151,14 +151,13 @@ pub enum Error {
     Redis(#[from] redis::RedisError),
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "test_redis"))]
 mod tests {
     use crate::sql::{Query, QueryResponse, UidGetter};
 
     use super::RedisCacher;
 
     #[tokio::test]
-    #[ignore = "requires a running Redis server"]
     async fn test_cache() {
         let mut conn = create_connection(0).await;
         let mut cacher = RedisCacher::new(&mut conn);
@@ -189,7 +188,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires a running Redis server"]
     async fn test_cache_not_hit() {
         let mut conn = create_connection(1).await;
         let mut cacher = RedisCacher::new(&mut conn);
@@ -209,7 +207,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "requires a running Redis server"]
     async fn test_two_uid_same() {
         let mut conn = create_connection(2).await;
         let mut cacher = RedisCacher::new(&mut conn);
