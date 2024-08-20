@@ -1,4 +1,10 @@
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 
 {
   # https://devenv.sh/basics/
@@ -13,7 +19,6 @@
     pkgs.cargo-nextest
     pkgs.protolint
     pkgs.protobuf
-    pkgs.sqlite
     pkgs.grpcui
   ];
 
