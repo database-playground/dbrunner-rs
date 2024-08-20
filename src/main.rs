@@ -1,5 +1,7 @@
 #![feature(assert_matches)]
 
+use std::net::SocketAddr;
+
 use mimalloc_rust::GlobalMiMalloc;
 use tonic::transport::Server;
 
@@ -12,14 +14,11 @@ static GLOBAL_MIMALLOC: GlobalMiMalloc = GlobalMiMalloc;
 
 #[tokio::main]
 async fn main() {
-    let addr = std::env::var("ADDR")
-        .or_else(|_| match std::env::var("PORT") {
-            Ok(port) => Ok(format!("0.0.0.0:{}", port)),
-            Err(e) => Err(e),
-        })
-        .unwrap_or("127.0.0.1:50051".to_string())
+    let port: u16 = std::env::var("PORT")
+        .unwrap_or("3000".to_string())
         .parse()
-        .expect("Failed to parse address");
+        .expect("PORT must be a number");
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
     let redis_addr = std::env::var("REDIS_ADDR").expect("REDIS_ADDR must be set");
     let redis_client = redis::Client::open(redis_addr).expect("Failed to open Redis client");
