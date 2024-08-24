@@ -26,9 +26,19 @@
   languages.rust.enable = true;
   languages.rust.channel = "nightly";
 
-  services.redis.enable = true;
   # https://devenv.sh/processes/
-  # processes.cargo-watch.exec = "cargo-watch";
+  services.redis.enable = true;
+  processes.dbrunner = {
+    exec = "cargo run --release";
+    process-compose = {
+      depends_on = {
+        redis.condition = "process_healthy";
+      };
+      environment = [
+        "PORT=30010"
+      ];
+    };
+  };
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
