@@ -64,7 +64,7 @@
             ExposedPorts = {
               "8080/tcp" = { };
             };
-            Env = [ "ADDR=0.0.0.0:8080" ];
+            Env = [ "PORT=8080" ];
           };
         };
       }
